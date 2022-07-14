@@ -37,7 +37,7 @@ const Popup = (props) => {
   return (
     <div
       onClick={handleClosePopup}
-      className={`popup ${props.type} ${props.opened && "popup_opened"}`}
+      className={`popup${" " + props.type}${props.opened ? " popup_opened" : ""}`}
     >
       <div className="popup__window">
         {props.children}

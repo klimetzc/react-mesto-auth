@@ -1,23 +1,31 @@
 import "../index.css";
 import Header from "./Header";
-import Profile from "./Profile";
 import Footer from "./Footer";
-import Elements from "./Elements";
 import PopupEdit from "./PopupEdit";
 import { useState, useEffect, createContext } from "react";
 import PopupAvatar from "./PopupAvatar";
 import PopupAdd from "./PopupAdd";
 import PopupWithImage from "./PopupWithImage";
 import api from "../utils/api";
+import auth from "../utils/auth";
 import PopupDelete from "./PopupDelete";
+import Main from "./Main";
+import Login from "./Login";
+import Register from "./Register";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import InfoTooltip from "./InfoTooltip";
 
 export const Visibles = createContext("popupsVisible");
 export const Theme = createContext("dark");
 export const User = createContext("user");
 export const Cards = createContext("cards");
+export const LoggedIn = createContext("login");
 
 const App = () => {
+  const navigate = useNavigate();
   const [user, setUser] = useState({});
+  const [userEmail, setUserEmail] = useState("email@yandex.ru");
+  const [loggedIn, setLoggedIn] = useState(false);
   const [cards, setCards] = useState([]);
   const [isTextShown, setIsTextShown] = useState(false);
   const [textMessage, setTextMessage] = useState("Вы ещё не добавили новых мест");
@@ -29,12 +37,11 @@ const App = () => {
     popup_image: false,
     popup_avatar: false,
     popup_delete: false,
+    popup_infotooltip: false,
   });
-
-  const [isLigthTheme, setIsLightTheme] = useState(
-    localStorage.getItem("lightTheme") ? true : false
-  );
-
+  const [tooltipMessage, setTooltipMessage] = useState("Default message");
+  const [tooltipPositive, setTooltipPositive] = useState(true);
+  const [isLigthTheme, setIsLightTheme] = useState(!!localStorage.getItem("lightTheme"));
   const [imgInPopup, setImgInPopup] = useState({
     link: "https://via.placeholder.com/150",
     alt: "Новое место",
@@ -84,7 +91,48 @@ const App = () => {
       });
   };
 
+  const logout = () => {
+    localStorage.removeItem("JWT");
+    setLoggedIn(false);
+  };
+
+  const openInfoTooltip = () => {
+    setPopupsVisible({
+      ...popupsVisible,
+      popup_infotooltip: true,
+    });
+  };
+
+  const registerSubmit = async (event, email, password) => {
+    event.preventDefault();
+    const reg = await auth.register(email, password);
+    openInfoTooltip();
+    if (reg.ok) {
+      setTooltipPositive(true);
+      setTooltipMessage("Регистрация прошла успешно!");
+    } else {
+      setTooltipPositive(false);
+      setTooltipMessage("Что-то пошло не так! Попробуйте ещё раз.");
+    }
+    console.log("regData: ", reg);
+    openInfoTooltip();
+  };
+
+  const loginSubmit = async (event, email, password) => {
+    event.preventDefault();
+    const login = await auth.login(email, password);
+    if (login.ok) {
+      setLoggedIn(true);
+      setUserEmail(email);
+    } else {
+      openInfoTooltip();
+      setTooltipPositive(false);
+      setTooltipMessage("Что-то пошло не так! Попробуйте ещё раз.");
+    }
+  };
+
   useEffect(() => {
+    console.log("Перезагрузка страницы");
     api
       .getUserData()
       .then((res) => {
@@ -107,6 +155,20 @@ const App = () => {
       .finally((res) => {
         setIsLoading(false);
       });
+
+    if (!!localStorage.getItem("JWT")) {
+      auth
+        .verify(localStorage.getItem("JWT"))
+        .then((res) => {
+          setLoggedIn(true);
+          navigate("/");
+          setUserEmail(res.data.email);
+        })
+        .catch((err) => {
+          setLoggedIn(false);
+          console.log(err);
+        });
+    }
   }, []);
 
   return (
@@ -116,17 +178,43 @@ const App = () => {
           <Cards.Provider value={[cards, setCards]}>
             <User.Provider value={[user, setUser]}>
               <div className="main">
-                <Header />
-                <Profile user={user} />
-                <Elements
-                  cards={cards}
-                  setImgInPopup={setImgInPopup}
-                  user={user}
-                  textMessage={textMessage}
-                  isTextShown={isTextShown}
-                  isLoading={isLoading}
-                  setCurrentCard={setCurrentCard}
-                />
+                <Header loggedIn={loggedIn} logout={logout} email={userEmail} />
+                <LoggedIn.Provider value={[loggedIn, setLoggedIn]}>
+                  <Routes>
+                    <Route
+                      path="/"
+                      element={
+                        loggedIn ? (
+                          <Main
+                            user={user}
+                            cards={cards}
+                            setImgInPopup={setImgInPopup}
+                            textMessage={textMessage}
+                            isTextShown={isTextShown}
+                            isLoading={isLoading}
+                            setCurrentCard={setCurrentCard}
+                          />
+                        ) : (
+                          <Navigate to="/sign-up" />
+                        )
+                      }
+                    />
+                    <Route
+                      path="/sign-in"
+                      element={
+                        loggedIn ? <Navigate to="/" /> : <Login submitHandler={loginSubmit} />
+                      }
+                    />
+                    <Route
+                      path="/sign-up"
+                      element={
+                        loggedIn ? <Navigate to="/" /> : <Register submitHandler={registerSubmit} />
+                      }
+                    />
+                    <Route path="*" element={<Navigate to="/" />} />
+                  </Routes>
+                </LoggedIn.Provider>
+
                 <Footer />
               </div>
 
@@ -155,6 +243,12 @@ const App = () => {
                 opened={popupsVisible.popup_delete}
                 currentCard={currentCard}
                 submitHandler={deleteCard}
+              />
+              <InfoTooltip
+                type="popup_infotooltip"
+                opened={popupsVisible.popup_infotooltip}
+                message={tooltipMessage}
+                isPositive={tooltipPositive}
               />
             </User.Provider>
           </Cards.Provider>

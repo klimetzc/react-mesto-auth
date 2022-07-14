@@ -4,17 +4,18 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--hover-button);
+  /* background: var(--hover-button); */
+  background-color: #999999;
   border: 0 none #ffffff;
   border-radius: 50px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #c4c4c4;
+  background: #999;
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: var(--hover-button);
+  background: #999;
 }
 
 ::-webkit-scrollbar-track {
