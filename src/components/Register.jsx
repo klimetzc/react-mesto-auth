@@ -6,14 +6,13 @@ const Register = (props) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const submitHandler = (event) => {
+    props.submitHandler(event, email, password);
+  };
+
   return (
     <>
-      <form
-        className="login"
-        onSubmit={(e) => {
-          props.submitHandler(e, email, password);
-        }}
-      >
+      <form className="login" onSubmit={submitHandler}>
         <h2 className="login__header">Регистрация</h2>
         <input
           type="email"

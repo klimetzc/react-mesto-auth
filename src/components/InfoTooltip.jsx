@@ -6,11 +6,11 @@ import NOTOK from "../images/NOTOK.svg";
 const InfoTooltip = (props) => {
   return (
     <Popup opened={props.opened} type={props.type}>
-      {props.isPositive ? (
-        <img className="tooltip__image" src={OK} alt="ок" />
-      ) : (
-        <img className="tooltip__image" src={NOTOK} alt="не ок" />
-      )}
+      <img
+        className="tooltip__image"
+        src={props.isPositive ? OK : NOTOK}
+        alt={props.isPositive ? "Окей" : "Не окей"}
+      />
       <p className="tooltip__message">{props.message}</p>
     </Popup>
   );

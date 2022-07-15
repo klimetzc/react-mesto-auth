@@ -1,6 +1,7 @@
 import React, { useContext } from "react";
 import { Theme } from "./App";
-import { Link, useLocation } from "react-router-dom";
+import { Link, Route, Routes, useLocation } from "react-router-dom";
+import ProtectedRoute from "./ProtectedRoute";
 
 const Header = (props) => {
   const [theme, setTheme] = useContext(Theme);
@@ -25,22 +26,48 @@ const Header = (props) => {
         ㅤ
       </a>
       <div style={{ display: "flex", gap: "24px" }}>
-        {props.loggedIn && <span>{props.email}</span>}
-        {props.loggedIn && (
-          <button onClick={props.logout} className="header__logout">
-            Выйти
-          </button>
-        )}
-        {location.pathname === "/sign-up" && (
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <>
+                  <span>{props.email}</span>
+                  <button onClick={props.logout} className="header__logout">
+                    Выйти
+                  </button>
+                </>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sign-up"
+            element={
+              <Link to="/sign-in" className="header__logout">
+                Войти
+              </Link>
+            }
+          />
+          <Route
+            path="/sign-in"
+            element={
+              <Link to="/sign-up" className="header__logout">
+                Регистрация
+              </Link>
+            }
+          />
+        </Routes>
+
+        {/* {location.pathname === "/sign-up" && (
           <Link to="/sign-in" className="header__logout">
             Войти
           </Link>
-        )}
-        {location.pathname === "/sign-in" && (
+        )} */}
+        {/* {location.pathname === "/sign-in" && (
           <Link to="/sign-up" className="header__logout">
             Регистрация
           </Link>
-        )}
+        )} */}
         <button
           onClick={handleThemeChanger}
           type="button"

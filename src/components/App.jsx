@@ -14,6 +14,7 @@ import Login from "./Login";
 import Register from "./Register";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import InfoTooltip from "./InfoTooltip";
+import ProtectedRoute from "./ProtectedRoute";
 
 export const Visibles = createContext("popupsVisible");
 export const Theme = createContext("dark");
@@ -94,6 +95,7 @@ const App = () => {
   const logout = () => {
     localStorage.removeItem("JWT");
     setLoggedIn(false);
+    navigate("/sign-in");
   };
 
   const openInfoTooltip = () => {
@@ -103,19 +105,11 @@ const App = () => {
     });
   };
 
-  const registerSubmit = async (event, email, password) => {
-    event.preventDefault();
-    const reg = await auth.register(email, password);
-    openInfoTooltip();
-    if (reg.ok) {
-      setTooltipPositive(true);
-      setTooltipMessage("Регистрация прошла успешно!");
-    } else {
-      setTooltipPositive(false);
-      setTooltipMessage("Что-то пошло не так! Попробуйте ещё раз.");
-    }
-    console.log("regData: ", reg);
-    openInfoTooltip();
+  const closeInfoTooltip = () => {
+    setPopupsVisible({
+      ...popupsVisible,
+      popup_infotooltip: false,
+    });
   };
 
   const loginSubmit = async (event, email, password) => {
@@ -131,8 +125,29 @@ const App = () => {
     }
   };
 
-  useEffect(() => {
-    console.log("Перезагрузка страницы");
+  const registerSubmit = async (event, email, password) => {
+    event.preventDefault();
+    const sleep = (ms) => {
+      return new Promise((r) => setTimeout(r, ms));
+    };
+    const reg = await auth.register(email, password);
+    openInfoTooltip();
+    if (reg.ok) {
+      setTooltipPositive(true);
+      setTooltipMessage("Регистрация прошла успешно!\nИдёт переадресация...");
+      await sleep(2000); // Потому что два запроса подряд вызывают 429 ошибку
+      await loginSubmit(event, email, password).then(() => {
+        closeInfoTooltip();
+      });
+    } else {
+      setTooltipPositive(false);
+      setTooltipMessage("Что-то пошло не так! Попробуйте ещё раз.");
+    }
+    console.log("regData: ", reg);
+    openInfoTooltip();
+  };
+
+  const getPageInfo = () => {
     api
       .getUserData()
       .then((res) => {
@@ -155,12 +170,24 @@ const App = () => {
       .finally((res) => {
         setIsLoading(false);
       });
+  };
 
-    if (!!localStorage.getItem("JWT")) {
+  useEffect(() => {
+    closeInfoTooltip();
+    if (loggedIn) {
+      getPageInfo();
+    }
+  }, [loggedIn]);
+
+  useEffect(() => {
+    console.log("Перезагрузка страницы");
+
+    if (localStorage.getItem("JWT")) {
       auth
         .verify(localStorage.getItem("JWT"))
         .then((res) => {
           setLoggedIn(true);
+          getPageInfo();
           navigate("/");
           setUserEmail(res.data.email);
         })
@@ -184,7 +211,7 @@ const App = () => {
                     <Route
                       path="/"
                       element={
-                        loggedIn ? (
+                        <ProtectedRoute>
                           <Main
                             user={user}
                             cards={cards}
@@ -194,9 +221,7 @@ const App = () => {
                             isLoading={isLoading}
                             setCurrentCard={setCurrentCard}
                           />
-                        ) : (
-                          <Navigate to="/sign-up" />
-                        )
+                        </ProtectedRoute>
                       }
                     />
                     <Route
